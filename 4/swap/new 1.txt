@@ -1,0 +1,53 @@
+
+(AFTER_LOOP)
+
+    // -------------------------------------------------
+    // Compute address of arr[maxIndex] into R13
+    // R13 = R14 + R2
+    // -------------------------------------------------
+    @R14
+    D=M        // D = base
+    @R2
+    D=D+M      // D = base + maxIndex
+    @R13
+    M=D        // R13 = &arr[maxIndex]
+
+    // temp = arr[maxIndex]  (store in R5)
+    @R13
+    A=M
+    D=M        // D = arr[maxIndex]
+    @R5
+    M=D        // R5 = temp
+
+    // -------------------------------------------------
+    // Compute address of arr[minIndex] into R0 (reuse R0 now, i is no longer needed)
+    // R0 = R14 + R4
+    // -------------------------------------------------
+    @R14
+    D=M        // D = base
+    @R4
+    D=D+M      // D = base + minIndex
+    @R0
+    M=D        // R0 = &arr[minIndex]
+
+    // arr[maxIndex] = arr[minIndex]
+    @R0
+    A=M        // A = &arr[minIndex]
+    D=M        // D = arr[minIndex]
+    @R13
+    A=M        // A = &arr[maxIndex]
+    M=D        // arr[maxIndex] = arr[minIndex]
+
+    // arr[minIndex] = temp (R5)
+    @R5
+    D=M        // D = temp
+    @R0
+    A=M        // A = &arr[minIndex]
+    M=D        // arr[minIndex] = temp
+
+// ---------------------------------------------------------
+// Step 4: END
+// ---------------------------------------------------------
+(END)
+    @END
+    0;JMP

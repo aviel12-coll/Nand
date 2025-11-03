@@ -1,0 +1,78 @@
+// This file is part of nand2tetris, as taught in The Hebrew University, and
+// was written by Aviv Yaish. It is an extension to the specifications given
+// [here](https://www.nand2tetris.org) (Shimon Schocken and Noam Nisan, 2017),
+// as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
+// Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
+
+
+// The ExtendAlu chip is an extension of the standard ALU which also supports
+// shift operations.
+// The inputs of the extended ALU are instruction[9], x[16], y[16].
+// The "ng" and "zr" output pins behave the same as in the regular ALU.
+// The "out" output is defined as follows:
+// If instruction[8]=1 and instruction[7]=1 the output is identical to the 
+// regular ALU, where:
+// instruction[5]=zx, instruction[4]=nx, ..., instruction[0]=no
+// Else, if instruction[8]=0 and instruction[7]=1, the output is a shift:
+// - If instruction[4] == 0, the input "y" will be shifted, otherwise "x".
+// - If instruction[5] == 0, the shift will be a right-shift, otherwise left.
+// - All other inputs are undefined.
+CHIP ExtendAlu {
+    IN x[16], y[16], instruction[9];
+    OUT out[16], zr, ng;
+     
+    PARTS:
+    ALU(
+        x=x, y=y,
+        zx=instruction[5], nx=instruction[4],
+        zy=instruction[3], ny=instruction[2],
+        f=instruction[1],  no=instruction[0],
+        out=OutAlu, zr=ZRALU, ng=NGALU
+    );
+	
+    ShiftLeft(in=y, out=yLeft);
+    ShiftRight(in=y, out=yRight);
+    ShiftLeft(in=x, out=xLeft);
+    ShiftRight(in=x, out=xRight);
+	
+    // choose which one to move- x or y
+    Mux16(a=yLeft,  b=xLeft,  sel=instruction[4], out=shiftLeft);
+    Mux16(a=yRight, b=xRight, sel=instruction[4], out=shiftRight);
+	
+    // choose to move right or left 
+    Mux16(a=shiftRight, b=shiftLeft, sel=instruction[5], out=shiftOut);
+	
+    // if instruction[8]==1 && instruction[7]==1 then just alu
+    // if instruction[8]==0 && instruction[7]==1 then shift
+    And(a=instruction[8], b=instruction[7], out=doAlu);
+
+    // define Notinstruction BEFORE using it
+    Not(in=instruction[8], out=Notinstruction);
+    And(a=instruction[7], b=Notinstruction, out=doShift);
+
+    // FINAL OUT: select ALU when doAlu=1, else shift
+    Mux16(a=shiftOut, b=OutAlu, sel=doAlu, out=tempout);
+	
+	// Mux4Way16
+    Mux4Way16(a=yRight, b=xRight, c=yLeft, d=xLeft,
+    sel=instruction[4..5],out[0..7] = outs1, out[8..15] = outs2,
+	out[15] = isnegative , out=shifted);
+	
+    //if  shift == 0? 
+    Or8Way(in=outs1, out=or1);
+    Or8Way(in=outs2, out=or2);
+    Or(a=or1, b=or2, out=outzeroshift);
+    Not(in=outzeroshift, out=zeros);
+	
+	//out zr
+    Mux(a=zeros, b=ZRALU, sel=doAlu, out=zr);
+	 
+	//<0??
+    And(a=isnegative, b=true, out=leszeroshift);
+
+    //out ng
+    Mux(a=leszeroshift, b=NGALU, sel=doAlu, out=ng);
+
+    //out
+	Mux16(a=shiftOut, b=OutAlu, sel=doAlu, out=out);
+}

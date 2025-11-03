@@ -1,0 +1,109 @@
+// This file is part of nand2tetris, as taught in The Hebrew University, and
+// was written by Aviv Yaish. It is an extension to the specifications given
+// [here](https://www.nand2tetris.org) (Shimon Schocken and Noam Nisan, 2017),
+// as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
+// Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
+
+// This chip is an extension of the regular CPU that uses the extended ALU.
+// If instruction[15]==0 or (instruction[14]==1 and instruction[13]==1),
+// then CpuMul behaves exactly the same as the regular CPU.
+// If instruction[15]==1 and instruction[14]==0 the chip will behave as follows:
+// | Instruction           | 15 | 14 | 13 | a | c1 | c2 | c3 | c4 | c5 | c6 |
+// |-----------------------|:--:|:--:|:--:|:-:|:--:|:--:|:--:|:--:|:--:|:--:|
+// | Regular a-instruction |  0 |  * |  * | * |  * |  * |  * |  * |  * |  * |
+// | Regular c-instruction |  1 |  1 |  1 | * |  * |  * |  * |  * |  * |  * |
+// | dest=A<<;jump         |  1 |  0 |  1 | 0 |  1 |  0 |  0 |  0 |  0 |  0 |
+// | dest=D<<;jump         |  1 |  0 |  1 | 0 |  1 |  1 |  0 |  0 |  0 |  0 |
+// | dest=M<<;jump         |  1 |  0 |  1 | 1 |  1 |  0 |  0 |  0 |  0 |  0 |
+// | dest=A>>;jump         |  1 |  0 |  1 | 0 |  0 |  0 |  0 |  0 |  0 |  0 |
+// | dest=D>>;jump         |  1 |  0 |  1 | 0 |  0 |  1 |  0 |  0 |  0 |  0 |
+// | dest=M>>;jump         |  1 |  0 |  1 | 1 |  0 |  0 |  0 |  0 |  0 |  0 |
+// Where:
+// - "<<" is a left shift, and ">>" is a right shift, as defined in project 2.
+//   These notations were chosen because they are used in real programming
+//   languages.
+// - dest and jump can take the same values as in the regular CPU.
+
+CHIP CpuMul {
+    IN  
+        inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset=1) or continue executing
+                         // the current program (reset=0).
+    OUT 
+        outM[16],        // M value output
+        writeM,          // Write into M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+    
+		PARTS:   
+		// Step 1: Detect normal CPU mode 
+
+	// When instruction[15]==0, this is an A-instruction
+	Not(in=instruction[15], out=isAInstruction);
+
+	// When instruction[15]==1, instruction[14]==1, instruction[13]==1 regular C-instruction
+	And(a=instruction[14], b=instruction[13], out=isCnormal);
+	And(a=isCnormal, b=instruction[15], out=isCInstruction);
+
+	// If either A-instruction OR regular C-instruction behave like the normal CPU
+	Or(a=isAInstruction, b=isCInstruction, out=normalCpuMode);
+	
+	
+	
+	// c instruction write M
+	And(a=instruction[3], b=instruction[15], out=writeM);
+	
+	// load to DRegister
+	And(a=instruction[15], b=instruction[4], out=Dload);	
+	DRegister(in=outALU, load=Dload, out=ALUx);
+	
+	
+	// detect is is c or a instruction
+
+	Mux16(a=instruction, b=outALU, sel=instruction[15], out=outFirstMux);
+	
+	// load to Aregister
+
+	Not(in=instruction[15], out=AIns);
+
+	Or(a=AIns, b=instruction[5], out=ALoad);
+
+	ARegister(in=outFirstMux, load=ALoad ,out=outAReg, out[0..14]=addressM);
+	
+	And(a=instruction[12], b=instruction[15], out=AorM);
+
+	Mux16(a=outAReg, b=inM, sel=AorM, out=ALUy);
+	
+	ExtendAlu(x=ALUx,y=ALUy,instruction=instruction[6..14],out=outM,out=outALU,zr=zr,ng=ng);
+	
+	
+	Not(in=instruction[14], out=not14);
+	And(a=instruction[15], b=instruction[13], out=b15and13);
+	And(a=b15and13, b=not14, out=ISshift);
+
+			
+	Not(in=zr, out=nzr);
+	Not(in=ng, out=nng);
+
+	// out>0  == !zr & !ng
+	And(a=nzr, b=nng, out=isPos);
+
+	
+	And(a=instruction[0], b=isPos, out=Isjgt); 
+	And(a=instruction[1], b=zr,   out=ISjeq);  
+	And(a=instruction[2], b=ng,   out=Isjlt);  
+
+	
+	Or(a=Isjgt, b=ISjeq, out=gtOreq);
+	Or(a=gtOreq,  b=Isjlt, out=doJump);
+	
+	
+
+	
+	//Not(in=doJump, out=pcInc);
+	And(a=doJump, b= instruction[15], out=makeJump);
+	PC(in=outAReg, load=makeJump, inc=true, reset=reset, out[0..14]=pc);
+	
+	}
