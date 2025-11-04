@@ -24,7 +24,18 @@ class Parser:
         # Your code goes here!
         # A good place to start is to read all the lines of the input:
         # input_lines = input_file.read().splitlines()
-        pass
+        input_lines = input_file.read().splitlines()
+        self.commands = []
+        for line in input_lines:
+            # Remove comments
+            line = line.split('//')[0]
+            # Remove whitespace
+            line = line.strip()
+            if line:
+                self.commands.append(line)
+        self.current_command_index = -1 # start with -1 so that advance() sets it to 0 on first call    
+
+
 
     def has_more_commands(self) -> bool:
         """Are there more commands in the input?
@@ -33,14 +44,16 @@ class Parser:
             bool: True if there are more commands, False otherwise.
         """
         # Your code goes here!
-        pass
+        return self.current_command_index + 1 < len(self.commands)
 
     def advance(self) -> None:
         """Reads the next command from the input and makes it the current command.
         Should be called only if has_more_commands() is true.
         """
         # Your code goes here!
-        pass
+        if self.has_more_commands():
+            self.current_command_index += 1
+            self.current_command = self.commands[self.current_command_index]
 
     def command_type(self) -> str:
         """
@@ -51,7 +64,12 @@ class Parser:
             "L_COMMAND" (actually, pseudo-command) for (Xxx) where Xxx is a symbol
         """
         # Your code goes here!
-        pass
+        if self.current_command.startswith('@'):
+            return "A_COMMAND"
+        elif self.current_command.startswith('(') and self.current_command.endswith(')'):
+            return "L_COMMAND"
+        else:
+            return "C_COMMAND"
 
     def symbol(self) -> str:
         """
@@ -61,8 +79,12 @@ class Parser:
             "L_COMMAND".
         """
         # Your code goes here!
-        pass
-
+        if self.command_type() == "A_COMMAND":
+            return self.current_command[1:]  # Remove '@'
+        elif self.command_type() == "L_COMMAND":
+            return self.current_command[1:-1]  # Remove '(' and ')'
+        else:
+            raise ValueError("symbol() should be called only for A_COMMAND or L_COMMAND")
     def dest(self) -> str:
         """
         Returns:
@@ -70,7 +92,15 @@ class Parser:
             only when commandType() is "C_COMMAND".
         """
         # Your code goes here!
-        pass
+        if self.command_type() != "C_COMMAND":
+            raise ValueError("dest() should be called only for C_COMMAND")
+        command = self.current_command
+        # if "=" dont exist return null because there is no dest part
+        if '=' in command:
+            return self.current_command.split('=')[0]   
+        else:
+            return 'null'
+        
 
     def comp(self) -> str:
         """
@@ -79,7 +109,16 @@ class Parser:
             only when commandType() is "C_COMMAND".
         """
         # Your code goes here!
-        pass
+        if self.command_type() != "C_COMMAND":
+            raise ValueError("comp() should be called only for C_COMMAND")
+        command = self.current_command
+        if '=' in command:
+            return command.split('=')[1].split(';')[0]
+        else:
+            return command.split(';')[0]
+        # If no '=' or ';' is found, return the entire command
+        return command  
+    
 
     def jump(self) -> str:
         """
@@ -88,4 +127,13 @@ class Parser:
             only when commandType() is "C_COMMAND".
         """
         # Your code goes here!
-        pass
+        # if there no ';' return null because there is no jump part so return 'null'
+    
+        if self.command_type() != "C_COMMAND":
+            raise ValueError("jump() should be called only for C_COMMAND")
+        command = self.current_command
+        if ';' in command:
+            return command.split(';')[1]
+        else:
+            return 'null'
+        
