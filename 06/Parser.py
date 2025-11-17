@@ -6,6 +6,7 @@ as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
+import SymbolTable
 
 
 class Parser:
@@ -33,7 +34,9 @@ class Parser:
             line = line.strip()
             if line:
                 self.commands.append(line)
-        self.current_command_index = -1 # start with -1 so that advance() sets it to 0 on first call    
+        self.current_command_index = -1 # start with -1 so that advance() sets it to 0 on first call
+        self.table = SymbolTable.SymbolTable()
+        self.number_of_symbols = 16  # Next available RAM address for variables
 
 
 
@@ -97,7 +100,7 @@ class Parser:
         command = self.current_command
         # if "=" dont exist return null because there is no dest part
         if '=' in command:
-            return self.current_command.split('=')[0]   
+            return self.current_command.split('=')[0].strip()
         else:
             return 'null'
         
@@ -113,12 +116,12 @@ class Parser:
             raise ValueError("comp() should be called only for C_COMMAND")
         command = self.current_command
         if '=' in command:
-            return command.split('=')[1].split(';')[0]
+            return command.split('=')[1].split(';')[0].strip()
         else:
-            return command.split(';')[0]
+            return command.split(';')[0].strip()
         # If no '=' or ';' is found, return the entire command
-        return command  
-    
+        return command.strip()
+
 
     def jump(self) -> str:
         """
@@ -137,3 +140,26 @@ class Parser:
         else:
             return 'null'
         
+    def a_instruction_value(self) -> str: 
+        """ Returns: str: the value of the current A-instruction. Should be called only when commandType() is "A_COMMAND". """ # Your code goes here! symbol=self.symbol() if symbol.isdigit(): return self.padding(bin(int(symbol))[2:]) # Convert to binary and add zero padding else: if not self.table.contains(symbol): self.table.add_entry(symbol, self.number_of_symbols) self.number_of_symbols += 1 symbol = self.table.get_address(symbol) return self.padding(bin(address)[2:]) # Convert to binary and add zero padding    
+        # Your code goes here!
+        symbol = self.symbol()
+        if symbol.isdigit():
+            return self.padding(bin(int(symbol))[2:])  # Convert to binary and add zero padding
+        else:
+            if not self.table.contains(symbol):
+                self.table.add_entry(symbol, self.number_of_symbols)
+                self.number_of_symbols += 1
+            symbol = self.table.get_address(symbol)
+            return self.padding(bin(symbol )[2:])  # Convert to binary and add zero padding 
+        
+
+
+    def padding(self, binary: str) -> str:
+        """
+        Args:
+            binary (str): the binary string to pad.
+        Returns:
+            str: the padded binary string.
+        """
+        return '0' * (16 - len(binary)) + binary    

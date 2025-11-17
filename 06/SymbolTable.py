@@ -18,12 +18,18 @@ class SymbolTable:
         and their pre-allocated RAM addresses, according to section 6.2.3 of the
         book.
         """
-        # Your code goes here!
-        self.table = {} # Initialize an empty symbol table
+        # Initialize predefined symbols according to the Hack spec.
+        self._table = {
+            "SP": 0,
+            "LCL": 1,
+            "ARG": 2,
+            "THIS": 3,
+            "THAT": 4,
+            "SCREEN": 16384,
+            "KBD": 24576,
+        }
         for i in range(16):
-            self.add_entry(f"R{i}", i)
-            self.add_entry("KBD", 24576)
-            self.add_entry("SCREEN", 16384)
+            self._table[f"R{i}"] = i
     
 
     def add_entry(self, symbol: str, address: int) -> None:
@@ -33,8 +39,7 @@ class SymbolTable:
             symbol (str): the symbol to add.
             address (int): the address corresponding to the symbol.
         """
-        # Your code goes here!
-        self.table[symbol] = address
+        self._table[symbol] = address
 
     def contains(self, symbol: str) -> bool:
         """Does the symbol table contain the given symbol?
@@ -45,8 +50,7 @@ class SymbolTable:
         Returns:
             bool: True if the symbol is contained, False otherwise.
         """
-        # Your code goes here!
-        return symbol in self.table
+        return symbol in self._table
     
 
     def get_address(self, symbol: str) -> int:
@@ -58,5 +62,4 @@ class SymbolTable:
         Returns:
             int: the address associated with the symbol.
         """
-        # Your code goes here!
-        return self.table[symbol]   
+        return self._table[symbol]

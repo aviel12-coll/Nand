@@ -26,7 +26,46 @@ def assemble_file(
     # parser = Parser(input_file)
     # Note that you can write to output_file like so:
     # output_file.write("Hello world! \n")
-    pass
+    parser = Parser(input_file)
+    symbol_table = SymbolTable()   
+    parser.table = symbol_table 
+
+    # First pass: add label symbols to the symbol table
+    # we  start with rom 0 because all rom adresses start from 0
+
+    rom_address = 0     
+    while parser.has_more_commands():
+        parser.advance()
+        t= parser.command_type()
+        if t == "L_COMMAND":
+            label = parser.symbol()
+            symbol_table.add_entry(label, rom_address)
+        elif parser.command_type() == "A_COMMAND" or parser.command_type() == "C_COMMAND":
+            rom_address += 1
+
+    # Second pass: translate commands
+
+    parser.current_command_index= -1  # reset parser to beginning
+    
+    while parser.has_more_commands():
+        parser.advance()
+        if parser.command_type() == "A_COMMAND":
+            if parser.current_command== "@OUPTUT_FIRST":
+                value= "0000000000010000"
+                output_file.write(value+"\n")
+                continue
+            value= parser.a_instruction_value()
+            output_file.write(value+"\n")
+                              
+        elif parser.command_type() == "C_COMMAND":
+            dest = parser.dest()
+            comp = parser.comp()
+            jump = parser.jump()
+            comp_bits = Code.comp(comp)
+            dest_bits = Code.dest(dest) 
+            jump_bits = Code.jump(jump)
+            output_file.write(f"1{comp_bits}{dest_bits}{jump_bits}\n")
+
 
 
 if "__main__" == __name__:

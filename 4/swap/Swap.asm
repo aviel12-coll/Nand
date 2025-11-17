@@ -15,11 +15,6 @@
 // - Changing R14, R15 is not allowed.
 
 // Put your code here.
-// ---------------------------------------------------------
-// swapMinMax.asm
-// Finds min and max in array [R14 ... R14+R15-1] and swaps them
-// Constraints: R14 = base address (unchanged), R15 = length (unchanged)
-// ---------------------------------------------------------
 
 // ---------------------------------------------------------
 // Step 0: Handle edge cases
