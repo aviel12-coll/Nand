@@ -17,10 +17,9 @@ class CodeWriter:
         Args:
             output_stream (typing.TextIO): output stream.
         """
-        # Your code goes here!
-        # Note that you can write to output_stream like so:
-        # output_stream.write("Hello world! \n")
-        pass
+        self.output_stream = output_stream
+        self.filename = ""
+        self.label_counter = 0
 
     def set_file_name(self, filename: str) -> None:
         """Informs the code writer that the translation of a new VM file is 
@@ -40,7 +39,7 @@ class CodeWriter:
         # the function "translate_file" in Main.py using python's os library,
         # For example, using code similar to:
         # input_filename, input_extension = os.path.splitext(os.path.basename(input_file.name))
-        pass
+        self.filename = filename   
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -51,8 +50,181 @@ class CodeWriter:
         Args:
             command (str): an arithmetic command.
         """
-        # Your code goes here!
-        pass
+        if command == "not":
+            self.write_not()
+        if command == "neg":
+            self.write_neg()
+        if command == "add":
+            self.write_add()
+        if command == "sub":
+            self.write_sub()
+
+        if command == "eq":
+            self.write_eq()
+        if command == "gt":
+            self.write_gt() 
+        if command == "lt":
+            self.write_lt()
+        if command == "and":
+            self.write_and()
+
+        if command == "or":
+            self.write_or()      
+
+    def write_lt(self) -> None:
+        """Writes assembly code that is the translation of the 'lt' command.
+        The 'lt' command pops the top two values from the stack, compares them
+        and pushes 'true' (-1) onto the stack if the first is less than the second,
+        or 'false' (0) if it is not.
+        """
+        label_true = f"LT_TRUE_{self.label_counter}"
+        label_end = f"LT_END_{self.label_counter}"
+        self.label_counter += 1
+
+        self.output_stream.write(
+            "// lt\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=M-1\n"    # SP--
+            "D=M\n"      # D=Y  
+            "A=A-1\n"    # A=SP-2
+            "D=M-D\n"    # D=X-Y
+            f"@{label_true}\n"
+            "D;JLT\n"    # If X<Y, jump to label_true
+            "@SP\n"
+            "A=M-1\n"
+            "A=A-1\n"
+            "M=0\n"      # Push false (0)
+            f"@{label_end}\n"
+            "0;JMP\n"
+            f"({label_true})\n"
+            "@SP\n"
+            "A=M-1\n"
+            "A=A-1\n"
+            "M=-1\n"     # Push true (-1)
+            f"({label_end})\n"
+        )
+
+
+    def write_and(self) -> None:
+        """Writes assembly code that is the translation of the 'and' command.
+        The 'and' command pops the top two values from the stack, computes their
+        bitwise AND, and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+            "// and\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=M-1\n"    # SP--
+            "D=M\n"      # D=Y  
+            "A=A-1\n"    # A=SP-2
+            "M=M&D\n"    # M=X&Y
+        )
+    def write_or(self) -> None:
+        """Writes assembly code that is the translation of the 'or' command.
+        The 'or' command pops the top two values from the stack, computes their
+        bitwise OR, and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+            "// or\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=M-1\n"    # SP--
+            "D=M\n"      # D=Y  
+            "A=A-1\n"    # A=SP-2
+            "M=M|D\n"    # M=X|Y
+        )
+    def write_eq(self) -> None:
+        """Writes assembly code that is the translation of the 'eq' command.
+        The 'eq' command pops the topmost value from the stack, checks if it equals 0,
+        and pushes 'true' (-1) onto the stack if it is 0, or 'false' (0) if it is not.
+        """
+        label_true = f"EQ_TRUE_{self.label_counter}"
+        label_end = f"EQ_END_{self.label_counter}"
+        self.label_counter += 1
+
+        self.output_stream.write(
+            "// eq\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "D=M\n"      # D=X (top value)
+            f"@{label_true}\n"
+            "D;JEQ\n"    # If X==0, jump to label_true
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=0\n"      # Push false (0)
+            f"@{label_end}\n"
+            "0;JMP\n"
+            f"({label_true})\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=-1\n"     # Push true (-1)
+            f"({label_end})\n"
+        )          
+
+    def  write_sub(self) -> None:
+        """Writes assembly code that is the translation of the 'sub' command.
+        The 'sub' command pops the top two values from the stack, computes their
+        difference (topmost minus the one below it), and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+            "// sub\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=M-1\n"    # SP--
+            "D=M\n"      # D=Y  
+            "A=A-1\n"    # A=SP-2
+            "M=M-D\n"    # M=X-Y
+        )   
+
+
+
+       
+
+
+    def write_add(self) -> None:
+        """Writes assembly code that is the translation of the 'add' command.
+        The 'add' command pops the top two values from the stack, computes their
+        sum, and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+            "// add\n"
+            "@SP\n"
+            "A=M-1\n"    # A=SP-1
+            "M=M-1\n"    # SP--
+            "D=M\n"      # D=Y  
+            "A=A-1\n"    # A=SP-2
+            "M=M+D\n"    # M=X+Y
+        )
+
+    # handle the 'not' command
+    def write_not(self) -> None:
+        """Writes assembly code that is the translation of the 'not' command.
+        The 'not' command pops the topmost value from the stack, computes its
+        bitwise negation, and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+
+            "// not\n"
+            "@SP\n"
+            "A=M-1\n"   # Point to the topmost value
+            "M=!M\n"    # Compute bitwise negation
+        ) 
+    def write_neg(self) -> None:
+        """Writes assembly code that is the translation of the 'neg' command.
+        The 'neg' command pops the topmost value from the stack, computes its
+        arithmetic negation, and pushes the result back onto the stack.
+        """
+        self.output_stream.write(
+
+            "// neg\n"
+            "@SP\n"
+            "A=M-1\n"   # Point to the topmost value
+            "M=-M\n"    # Compute arithmetic negation
+        )
+
+        
+        
 
     def write_push_pop(self, command: str, segment: str, index: int) -> None:
         """Writes assembly code that is the translation of the given 
@@ -68,7 +240,7 @@ class CodeWriter:
         # be translated to the assembly symbol "Xxx.i". In the subsequent
         # assembly process, the Hack assembler will allocate these symbolic
         # variables to the RAM, starting at address 16.
-        pass
+        
 
     def write_label(self, label: str) -> None:
         """Writes assembly code that affects the label command. 
