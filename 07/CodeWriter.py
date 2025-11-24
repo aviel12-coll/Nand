@@ -241,6 +241,215 @@ class CodeWriter:
         # assembly process, the Hack assembler will allocate these symbolic
         # variables to the RAM, starting at address 16.
         
+        if command == "C_PUSH" and segment == "constant":
+            self.write_push_constant(index)
+            return
+
+        if command == "C_PUSH" and segment in ("local", "argument", "this", "that"):
+            base_map = {
+                "local": "LCL",
+                "argument": "ARG",
+                "this": "THIS",
+                "that": "THAT"
+            }
+            self.write_pust_base(base_map[segment], index)
+            return
+
+        if command == "C_POP" and segment in ("local", "argument", "this", "that"):
+            base_map = {
+                "local": "LCL",
+                "argument": "ARG",
+                "this": "THIS",
+                "that": "THAT"
+            }
+            self.write_pop_base(base_map[segment], index)
+            return
+
+        if command == "C_PUSH" and segment == "temp":
+            self.write_push_temp(index)
+            return
+
+        if command == "C_POP" and segment == "temp":
+            self.write_pop_temp(index)
+            return
+
+        if command == "C_PUSH" and segment == "pointer":
+            self.write_push_pointer(index)
+            return
+
+        if command == "C_POP" and segment == "pointer":
+            self.write_pop_pointer(index)
+            return
+    
+    # consst not pointing to ram   
+    def write_push_constant(self, index: int) -> None:
+        """Writes assembly code for 'push constant index'."""
+        self.output_stream.write(
+            f"// push constant {index}\n"
+            f"@{index}\n"
+            "D=A\n"          # D = constant value
+            "@SP\n"
+            "A=M\n"          # A = SP (top free slot)
+            "M=D\n"          # *SP = D
+            "@SP\n"
+            "M=M+1\n" )  
+                 
+    def write_push_local(self, index: int) -> None:
+        """Writes assembly code for 'push local index'."""
+        self.output_stream.write(
+            f"// push local {index}\n"
+            "@LCL\n"
+            "D=M\n"              # D = base address of local segment
+            f"@{index}\n"
+            "A=D+A\n"            # A = LCL + index
+            "D=M\n"              # D = RAM[LCL + index]
+            "@SP\n"
+            "A=M\n"              # A = SP (first free stack slot)
+            "M=D\n"              # *SP = value
+            "@SP\n"
+            "M=M+1\n"            # SP++
+        )
+
+
+    def write_pop_local(self, index: int) -> None:
+        """Writes assembly code for 'pop local index'."""
+        self.output_stream.write(
+            f"// pop local {index}\n"
+            "@LCL\n"
+            "D=M\n"              # D = base address of local segment
+            f"@{index}\n"
+            "D=D+A\n"            # D = LCL + index
+            "@R13\n"
+            "M=D\n"              # R13 = target address
+            "@SP\n"
+            "AM=M-1\n"           # SP--; A = SP
+            "D=M\n"              # D = *SP (value to pop)
+            "@R13\n"
+            "A=M\n"              # A = target address
+            "M=D\n"              # RAM[LCL + index] = value
+        )
+
+
+    # push this, that, argument, local
+    def write_pust_base(self, segment_base: str, index: int) -> None: 
+           
+        """Writes assembly code for 'push segment_base index'."""
+        self.output_stream.write(
+            f"// push {segment_base} {index}\n"
+            f"@{segment_base}\n"
+            "D=M\n"              # D = base address of segment
+            f"@{index}\n"
+            "A=D+A\n"            # A = segment_base + index
+            "D=M\n"              # D = RAM[segment_base + index]
+            "@SP\n"
+            "A=M\n"              # A = SP (first free stack slot)
+            "M=D\n"              # *SP = value
+            "@SP\n"
+            "M=M+1\n"            # SP++
+        )
+    # pop this, that, argument, local    
+    def write_pop_base(self, segment_base: str, index: int) -> None:
+        """Writes assembly code for 'pop segment_base index'."""
+        self.output_stream.write(
+            f"// pop {segment_base} {index}\n"
+            f"@{segment_base}\n"
+            "D=M\n"              # D = base address of segment
+            f"@{index}\n"
+            "D=D+A\n"            # D = segment_base + index
+            "@R13\n"
+            "M=D\n"              # R13 = target address
+            "@SP\n"
+            "AM=M-1\n"           # SP--; A = SP
+            "D=M\n"              # D = *SP (value to pop)
+            "@R13\n"
+            "A=M\n"              # A = target address
+            "M=D\n"              # RAM[segment_base + index] = value
+        )
+    # 
+    # calcul the address of temp+index = 5+index, store it in R13, then pop the stack value into D,write D into RAM[R13]
+    def write_pop_temp(self, index: int) -> None:
+        """Writes assembly code for 'pop temp index'."""
+        self.output_stream.write(
+            f"// pop temp {index}\n"
+            "@5\n"
+            "D=A\n"              # D = 5 (base address of temp segment)
+            f"@{index}\n"
+            "D=D+A\n"            # D = 5 + index
+            "@R13\n"
+            "M=D\n"              # R13 = target address (5 + index)
+
+            "@SP\n"
+            "AM=M-1\n"           # SP-- ; A=SP ; M=*SP (top stack value)
+            "D=M\n"              # D = popped value
+
+            "@R13\n"
+            "A=M\n"              # A = target address
+            "M=D\n"              # RAM[5 + index] = D
+        )
+
+# push temp+index = 5+index, read RAM[5+index] into D, push D onto stack
+    def write_push_temp(self, index: int) -> None:
+        """Writes assembly code for 'push temp index'."""
+        self.output_stream.write(
+            f"// push temp {index}\n"
+            "@5\n"
+            "D=A\n"              # D = 5 (base address of temp segment)
+            f"@{index}\n"
+            "A=D+A\n"            # A = 5 + index
+            "D=M\n"              # D = RAM[5 + index]
+
+            "@SP\n"
+            "A=M\n"              # A = SP (first free stack slot)
+            "M=D\n"              # *SP = D
+
+            "@SP\n"
+            "M=M+1\n"            # SP++
+        )   
+
+    def write_push_pointer(self, index: int) -> None:
+        """Writes assembly code for 'push pointer index'."""
+        base_map = {
+            0: "THIS",
+            1: "THAT"
+        }
+        segment_base = base_map[index]
+        self.output_stream.write(
+            f"// push pointer {index}\n"
+            f"@{segment_base}\n"
+            "D=M\n"              # D = RAM[segment_base]
+
+            "@SP\n"
+            "A=M\n"              # A = SP (first free stack slot)
+            "M=D\n"              # *SP = D
+
+            "@SP\n"
+            "M=M+1\n"            # SP++
+        )   
+    def write_pop_pointer(self, index: int) -> None:
+        """Writes assembly code for 'pop pointer index'."""
+        base_map = {
+            0: "THIS",
+            1: "THAT"
+        }
+        segment_base = base_map[index]
+        self.output_stream.write(
+            f"// pop pointer {index}\n"
+            "@SP\n"
+            "AM=M-1\n"           # SP--; A = SP
+            "D=M\n"              # D = *SP (value to pop)
+
+            f"@{segment_base}\n"
+            "M=D\n"              # RAM[segment_base] = D
+        )            
+
+       
+    
+                    
+                
+
+
+
+        
 
     def write_label(self, label: str) -> None:
         """Writes assembly code that affects the label command. 
