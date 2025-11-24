@@ -55,7 +55,21 @@ class Parser:
         # Your code goes here!
         # A good place to start is to read all the lines of the input:
         # input_lines = input_file.read().splitlines()
-        pass
+        input_lines = input_file.read().splitlines()
+        self.commands = []
+        
+        # Clean lines: remove whitespace and comments
+        for line in input_lines:
+            # Remove comments
+            line = line.split('//')[0]
+            # Remove leading/trailing whitespace
+            line = line.strip()
+            # Skip empty lines
+            if line:
+                self.commands.append(line)
+        
+        self.current_command = ""
+        self.current_index = -1
 
     def has_more_commands(self) -> bool:
         """Are there more commands in the input?
@@ -64,7 +78,7 @@ class Parser:
             bool: True if there are more commands, False otherwise.
         """
         # Your code goes here!
-        pass
+        return self.current_index + 1 < len(self.commands)
 
     def advance(self) -> None:
         """Reads the next command from the input and makes it the current 
@@ -72,7 +86,8 @@ class Parser:
         there is no current command.
         """
         # Your code goes here!
-        pass
+        self.current_index += 1
+        self.current_command = self.commands[self.current_index]
 
     def command_type(self) -> str:
         """
@@ -84,7 +99,31 @@ class Parser:
             "C_RETURN", "C_CALL".
         """
         # Your code goes here!
-        pass
+        parts = self.current_command.split()
+        command = parts[0]
+        
+        arithmetic_commands = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "shiftleft", "shiftright"}
+        
+        if command in arithmetic_commands:
+            return "C_ARITHMETIC"
+        elif command == "push":
+            return "C_PUSH"
+        elif command == "pop":
+            return "C_POP"
+        elif command == "label":
+            return "C_LABEL"
+        elif command == "goto":
+            return "C_GOTO"
+        elif command == "if-goto":
+            return "C_IF"
+        elif command == "function":
+            return "C_FUNCTION"
+        elif command == "call":
+            return "C_CALL"
+        elif command == "return":
+            return "C_RETURN"
+        else:
+            return "C_ARITHMETIC"  # fallback
 
     def arg1(self) -> str:
         """
@@ -94,7 +133,12 @@ class Parser:
             Should not be called if the current command is "C_RETURN".
         """
         # Your code goes here!
-        pass
+        parts = self.current_command.split()
+        
+        if self.command_type() == "C_ARITHMETIC":
+            return parts[0]  # The command itself (add, sub, etc.)
+        else:
+            return parts[1]  # For push, pop, label, goto, if-goto, function, call
 
     def arg2(self) -> int:
         """
@@ -104,4 +148,5 @@ class Parser:
             "C_FUNCTION" or "C_CALL".
         """
         # Your code goes here!
-        pass
+        parts = self.current_command.split()
+        return int(parts[2])

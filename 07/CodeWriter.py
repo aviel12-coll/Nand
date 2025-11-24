@@ -39,7 +39,21 @@ class CodeWriter:
         # the function "translate_file" in Main.py using python's os library,
         # For example, using code similar to:
         # input_filename, input_extension = os.path.splitext(os.path.basename(input_file.name))
-        self.filename = filename   
+        self.filename = filename
+
+    def translate_command(self, command: str) -> None:
+        """Translates a VM command to assembly code.
+        
+        Args:
+            command (str): The VM command to translate.
+        """
+        parts = command.split()
+        if len(parts) == 1:
+            # Arithmetic command
+            self.write_arithmetic(parts[0])
+        else:
+            # Push/Pop command
+            self.write_push_pop(parts[0].upper(), parts[1], int(parts[2]))
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -280,6 +294,14 @@ class CodeWriter:
         if command == "C_POP" and segment == "pointer":
             self.write_pop_pointer(index)
             return
+
+        if command == "C_PUSH" and segment == "static":
+            self.write_push_static(index)
+            return
+
+        if command == "C_POP" and segment == "static":
+            self.write_pop_static(index)
+            return
     
     # consst not pointing to ram   
     def write_push_constant(self, index: int) -> None:
@@ -328,6 +350,32 @@ class CodeWriter:
             "A=M\n"              # A = target address
             "M=D\n"              # RAM[LCL + index] = value
         )
+
+    def write_push_static(self, index: int) -> None:
+        """Writes assembly code for 'push static index'."""
+        self.output_stream.write(
+            f"// push static {index}\n"
+            f"@{self.filename}.{index}\n"
+            "D=M\n"              # D = RAM[filename.index]
+
+            "@SP\n"
+            "A=M\n"              # A = SP (first free stack slot)
+            "M=D\n"              # *SP = D
+
+            "@SP\n"
+            "M=M+1\n"            # SP++
+        )
+    def write_pop_static(self, index: int) -> None:
+        """Writes assembly code for 'pop static index'."""
+        self.output_stream.write(
+            f"// pop static {index}\n"
+            "@SP\n"
+            "AM=M-1\n"           # SP--; A = SP
+            "D=M\n"              # D = *SP (value to pop)
+
+            f"@{self.filename}.{index}\n"
+            "M=D\n"              # RAM[filename.index] = D
+        )                
 
 
     # push this, that, argument, local
