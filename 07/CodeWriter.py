@@ -52,8 +52,9 @@ class CodeWriter:
             # Arithmetic command
             self.write_arithmetic(parts[0])
         else:
-            # Push/Pop command
-            self.write_push_pop(parts[0].upper(), parts[1], int(parts[2]))
+            # Push/Pop command - convert "push" to "C_PUSH", "pop" to "C_POP"
+            cmd_type = "C_" + parts[0].upper()
+            self.write_push_pop(cmd_type, parts[1], int(parts[2]))
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -92,33 +93,154 @@ class CodeWriter:
         or 'false' (0) if it is not.
         """
         label_true = f"LT_TRUE_{self.label_counter}"
+        label_false = f"LT_FALSE_{self.label_counter}"
         label_end = f"LT_END_{self.label_counter}"
+        label_x_neg = f"LT_X_NEG_{self.label_counter}"
+        label_x_pos = f"LT_X_POS_{self.label_counter}"
         self.label_counter += 1
 
         self.output_stream.write(
             "// lt\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=M-1\n"    # SP--
-            "D=M\n"      # D=Y  
-            "A=A-1\n"    # A=SP-2
-            "D=M-D\n"    # D=X-Y
-            f"@{label_true}\n"
-            "D;JLT\n"    # If X<Y, jump to label_true
+            "AM=M-1\n"    
+            "D=M\n"      
+            "@R13\n"
+            "M=D\n"       
             "@SP\n"
-            "A=M-1\n"
-            "A=A-1\n"
-            "M=0\n"      # Push false (0)
+            "AM=M-1\n"    
+            "D=M\n"       
+            
+            # Check if x < 0
+            f"@{label_x_neg}\n"
+            "D;JLT\n"    
+            
+            # x >= 0
+            f"({label_x_pos})\n"
+            "@R13\n"
+            "D=M\n"       
+            f"@{label_false}\n"
+            "D;JLT\n"    
+            # Both >= 0, safe to subtract
+            "@SP\n"
+            "A=M\n"
+            "D=M\n"     
+            "@R13\n"
+            "D=D-M\n"     
+            f"@{label_true}\n"
+            "D;JLT\n"
+            f"@{label_false}\n"
+            "0;JMP\n"
+            
+            # x < 0
+            f"({label_x_neg})\n"
+            "@R13\n"
+            "D=M\n"       
+            f"@{label_true}\n"
+            "D;JGE\n"     # if x < 0 and y >= 0, x < y (true)
+            # Both < 0, safe to subtract
+            "@SP\n"
+            "A=M\n"
+            "D=M\n"      
+            "@R13\n"
+            "D=D-M\n"     
+            f"@{label_true}\n"
+            "D;JLT\n"
+            
+            f"({label_false})\n"
+            "@SP\n"
+            "A=M\n"
+            "M=0\n"
+            "@SP\n"
+            "M=M+1\n"    
             f"@{label_end}\n"
             "0;JMP\n"
+            
             f"({label_true})\n"
             "@SP\n"
-            "A=M-1\n"
-            "A=A-1\n"
-            "M=-1\n"     # Push true (-1)
+            "A=M\n"
+            "M=-1\n"
+            "@SP\n"
+            "M=M+1\n"    
             f"({label_end})\n"
         )
 
+    def write_gt(self) -> None:
+        """Writes assembly code that is the translation of the 'gt' command.
+        The 'gt' command pops the top two values from the stack, compares them
+        and pushes 'true' (-1) onto the stack if the first is greater than the second,
+        or 'false' (0) if it is not.
+        """
+        label_true = f"GT_TRUE_{self.label_counter}"
+        label_false = f"GT_FALSE_{self.label_counter}"
+        label_end = f"GT_END_{self.label_counter}"
+        label_x_neg = f"GT_X_NEG_{self.label_counter}"
+        label_x_pos = f"GT_X_POS_{self.label_counter}"
+        self.label_counter += 1
+
+        self.output_stream.write(
+            "// gt\n"
+            "@SP\n"
+            "AM=M-1\n"    
+            "D=M\n"      
+            "@R13\n"
+            "M=D\n"      
+            "@SP\n"
+            "AM=M-1\n"    
+            "D=M\n"       
+            
+            # Check if x < 0
+            f"@{label_x_neg}\n"
+            "D;JLT\n"     # if x < 0, jump to x_neg
+            
+            # x >= 0
+            f"({label_x_pos})\n"
+            "@R13\n"
+            "D=M\n"      
+            f"@{label_true}\n"
+            "D;JLT\n"     # if x >= 0 and y < 0, x > y (true)
+            # Both >= 0, safe to subtract
+            "@SP\n"
+            "A=M\n"
+            "D=M\n"       
+            "@R13\n"
+            "D=D-M\n"     
+            f"@{label_true}\n"
+            "D;JGT\n"
+            f"@{label_false}\n"
+            "0;JMP\n"
+            
+            # x < 0
+            f"({label_x_neg})\n"
+            "@R13\n"
+            "D=M\n"       
+            f"@{label_false}\n"
+            "D;JGE\n"     # if x < 0 and y >= 0, x > y (false)
+            # Both < 0, safe to subtract
+            "@SP\n"
+            "A=M\n"
+            "D=M\n"       
+            "@R13\n"
+            "D=D-M\n"     
+            f"@{label_true}\n"
+            "D;JGT\n"
+            
+            f"({label_false})\n"
+            "@SP\n"
+            "A=M\n"
+            "M=0\n"
+            "@SP\n"
+            "M=M+1\n"    
+            f"@{label_end}\n"
+            "0;JMP\n"
+            
+            f"({label_true})\n"
+            "@SP\n"
+            "A=M\n"
+            "M=-1\n"
+            "@SP\n"
+            "M=M+1\n"    
+            f"({label_end})\n"
+        )
 
     def write_and(self) -> None:
         """Writes assembly code that is the translation of the 'and' command.
@@ -128,11 +250,10 @@ class CodeWriter:
         self.output_stream.write(
             "// and\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=M-1\n"    # SP--
-            "D=M\n"      # D=Y  
-            "A=A-1\n"    # A=SP-2
-            "M=M&D\n"    # M=X&Y
+            "AM=M-1\n"   
+            "D=M\n"      
+            "A=A-1\n"    
+            "M=M&D\n"    
         )
     def write_or(self) -> None:
         """Writes assembly code that is the translation of the 'or' command.
@@ -142,16 +263,16 @@ class CodeWriter:
         self.output_stream.write(
             "// or\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=M-1\n"    # SP--
-            "D=M\n"      # D=Y  
-            "A=A-1\n"    # A=SP-2
-            "M=M|D\n"    # M=X|Y
+            "AM=M-1\n"   
+            "D=M\n"       
+            "A=A-1\n"     
+            "M=M|D\n"     
         )
     def write_eq(self) -> None:
         """Writes assembly code that is the translation of the 'eq' command.
-        The 'eq' command pops the topmost value from the stack, checks if it equals 0,
-        and pushes 'true' (-1) onto the stack if it is 0, or 'false' (0) if it is not.
+        The 'eq' command pops the top two values from the stack, compares them,
+        and pushes 'true' (-1) onto the stack if they are equal,
+        or 'false' (0) if they are not.
         """
         label_true = f"EQ_TRUE_{self.label_counter}"
         label_end = f"EQ_END_{self.label_counter}"
@@ -160,21 +281,34 @@ class CodeWriter:
         self.output_stream.write(
             "// eq\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "D=M\n"      # D=X (top value)
-            f"@{label_true}\n"
-            "D;JEQ\n"    # If X==0, jump to label_true
+            "AM=M-1\n"    
+            "D=M\n"       
+            "@R13\n"
+            "M=D\n"       
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=0\n"      # Push false (0)
+            "AM=M-1\n"    
+            "D=M\n"       
+            "@R13\n"
+            "D=D-M\n"     
+            f"@{label_true}\n"
+            "D;JEQ\n"     # If x==y, jump to label_true
+            # False case
+            "@SP\n"
+            "A=M\n"
+            "M=0\n"       # RAM[SP] = 0
+            "@SP\n"
+            "M=M+1\n"    
             f"@{label_end}\n"
             "0;JMP\n"
+            # True case
             f"({label_true})\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=-1\n"     # Push true (-1)
+            "A=M\n"
+            "M=-1\n"      # RAM[SP] = -1
+            "@SP\n"
+            "M=M+1\n"    
             f"({label_end})\n"
-        )          
+        )
 
     def  write_sub(self) -> None:
         """Writes assembly code that is the translation of the 'sub' command.
@@ -184,11 +318,10 @@ class CodeWriter:
         self.output_stream.write(
             "// sub\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=M-1\n"    # SP--
-            "D=M\n"      # D=Y  
-            "A=A-1\n"    # A=SP-2
-            "M=M-D\n"    # M=X-Y
+            "AM=M-1\n"   
+            "D=M\n"       
+            "A=A-1\n"     
+            "M=M-D\n"     
         )   
 
 
@@ -204,11 +337,10 @@ class CodeWriter:
         self.output_stream.write(
             "// add\n"
             "@SP\n"
-            "A=M-1\n"    # A=SP-1
-            "M=M-1\n"    # SP--
-            "D=M\n"      # D=Y  
-            "A=A-1\n"    # A=SP-2
-            "M=M+D\n"    # M=X+Y
+            "AM=M-1\n"   
+            "D=M\n"       
+            "A=A-1\n"     
+            "M=M+D\n"     
         )
 
     # handle the 'not' command
@@ -311,8 +443,8 @@ class CodeWriter:
             f"@{index}\n"
             "D=A\n"          # D = constant value
             "@SP\n"
-            "A=M\n"          # A = SP (top free slot)
-            "M=D\n"          # *SP = D
+            "A=M\n"         
+            "M=D\n"         
             "@SP\n"
             "M=M+1\n" )  
                  
@@ -323,13 +455,13 @@ class CodeWriter:
             "@LCL\n"
             "D=M\n"              # D = base address of local segment
             f"@{index}\n"
-            "A=D+A\n"            # A = LCL + index
-            "D=M\n"              # D = RAM[LCL + index]
+            "A=D+A\n"           
+            "D=M\n"            
             "@SP\n"
-            "A=M\n"              # A = SP (first free stack slot)
-            "M=D\n"              # *SP = value
+            "A=M\n"              
+            "M=D\n"              
             "@SP\n"
-            "M=M+1\n"            # SP++
+            "M=M+1\n"           
         )
 
 
@@ -340,15 +472,15 @@ class CodeWriter:
             "@LCL\n"
             "D=M\n"              # D = base address of local segment
             f"@{index}\n"
-            "D=D+A\n"            # D = LCL + index
+            "D=D+A\n"            
             "@R13\n"
-            "M=D\n"              # R13 = target address
+            "M=D\n"           
             "@SP\n"
-            "AM=M-1\n"           # SP--; A = SP
-            "D=M\n"              # D = *SP (value to pop)
+            "AM=M-1\n"           
+            "D=M\n"              
             "@R13\n"
-            "A=M\n"              # A = target address
-            "M=D\n"              # RAM[LCL + index] = value
+            "A=M\n"             
+            "M=D\n"              
         )
 
     def write_push_static(self, index: int) -> None:
@@ -359,8 +491,8 @@ class CodeWriter:
             "D=M\n"              # D = RAM[filename.index]
 
             "@SP\n"
-            "A=M\n"              # A = SP (first free stack slot)
-            "M=D\n"              # *SP = D
+            "A=M\n"              
+            "M=D\n"              
 
             "@SP\n"
             "M=M+1\n"            # SP++

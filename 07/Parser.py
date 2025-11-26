@@ -150,3 +150,12 @@ class Parser:
         # Your code goes here!
         parts = self.current_command.split()
         return int(parts[2])
+    
+
+    def get_current_command(self) -> str:
+        """Returns the current command without advancing.
+
+        Returns:
+            str: the current command.
+        """
+        return self.current_command

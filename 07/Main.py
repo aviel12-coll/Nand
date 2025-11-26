@@ -27,9 +27,9 @@ def translate_file(
     #put the file name in varible
     
     while parser.has_more_commands():
-        com = parser.advance
-        code_writer.translate_command(com)
         parser.advance()
+        com = parser.get_current_command()
+        code_writer.translate_command(com)
 
 
 if "__main__" == __name__:
