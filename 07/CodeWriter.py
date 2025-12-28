@@ -20,6 +20,7 @@ class CodeWriter:
         self.output_stream = output_stream
         self.filename = ""
         self.label_counter = 0
+        self.current_function = None
 
     def set_file_name(self, filename: str) -> None:
         """Informs the code writer that the translation of a new VM file is 
@@ -51,10 +52,16 @@ class CodeWriter:
         if len(parts) == 1:
             # Arithmetic command
             self.write_arithmetic(parts[0])
-        else:
+        elif parts[0] == "push" or parts[0] == "pop":
             # Push/Pop command - convert "push" to "C_PUSH", "pop" to "C_POP"
             cmd_type = "C_" + parts[0].upper()
             self.write_push_pop(cmd_type, parts[1], int(parts[2]))
+        elif parts[0] == "label":
+            self.write_label(parts[1])
+        elif parts[0] == "goto":
+            self.write_goto(parts[1])
+        elif parts[0] == "if-goto":
+            self.write_if(parts[1])
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -642,9 +649,11 @@ class CodeWriter:
         Args:
             label (str): the label to write.
         """
-        # This is irrelevant for project 7,
-        # you will implement this in project 8!
-        pass
+        full_label = f"{self.current_function}${label}" if self.current_function else label
+        self.output_stream.write(
+            f"// label {label}\n"
+            f"({full_label})\n"
+        )
     
     def write_goto(self, label: str) -> None:
         """Writes assembly code that affects the goto command.
@@ -652,9 +661,12 @@ class CodeWriter:
         Args:
             label (str): the label to go to.
         """
-        # This is irrelevant for project 7,
-        # you will implement this in project 8!
-        pass
+        full_label = f"{self.current_function}${label}" if self.current_function else label
+        self.output_stream.write(
+            f"// goto {label}\n"
+            f"@{full_label}\n"
+            "0;JMP\n"
+        )
     
     def write_if(self, label: str) -> None:
         """Writes assembly code that affects the if-goto command. 
@@ -664,7 +676,15 @@ class CodeWriter:
         """
         # This is irrelevant for project 7,
         # you will implement this in project 8!
-        pass
+        full_label = f"{self.current_function}${label}" if self.current_function else label
+        self.output_stream.write(   
+            f"// if-goto {label}\n"
+            "@SP\n"
+            "AM=M-1\n"           # SP--; A = SP
+            "D=M\n"
+            f"@{full_label}\n"
+            "D;JNE\n"
+        )
     
     def write_function(self, function_name: str, n_vars: int) -> None:
         """Writes assembly code that affects the function command. 
