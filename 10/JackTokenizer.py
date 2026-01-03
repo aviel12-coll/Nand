@@ -5,6 +5,7 @@ was written by Aviv Yaish. It is an extension to the specifications given
 as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
+from pydoc import text
 import typing
 
 
@@ -91,6 +92,20 @@ class JackTokenizer:
     
     Note that ^, # correspond to shiftleft and shiftright, respectively.
     """
+    MAP_KEYWORDS = {
+        'class': "CLASS", 'constructor': "CONSTRUCTOR", 'function': "FUNCTION",
+        'method': "METHOD", 'field': "FIELD", 'static': "STATIC", 'var': "VAR",
+        'int': "INT", 'char': "CHAR", 'boolean': "BOOLEAN", 'void': "VOID",
+        'true': "TRUE", 'false': "FALSE", 'null': "NULL", 'this': "THIS",
+        'let': "LET", 'do': "DO", 'if': "IF", 'else': "ELSE",
+        'while': "WHILE", 'return': "RETURN"
+    }
+
+    MAP_SYMBOLS = {'{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
+               '-', '*', '/', '&', '|', '<', '>', '=', '~', '^', '#'}
+
+
+
 
     def __init__(self, input_stream: typing.TextIO) -> None:
         """Opens the input stream and gets ready to tokenize it.
@@ -101,7 +116,96 @@ class JackTokenizer:
         # Your code goes here!
         # A good place to start is to read all the lines of the input:
         # input_lines = input_stream.read().splitlines()
-        pass
+        input_text = input_stream.read()
+        clean_text = JackTokenizer.remove_comments(input_text)
+        self.tokens = []
+        i = 0
+        while i < len(clean_text):
+            token, next_i = self._extract_next_token(clean_text, i)
+            if token is not None:
+                self.tokens.append(token)
+            i = next_i
+
+        self.current_index = -1
+        self.current_token = None
+
+    def _extract_next_token(self, text: str, i: int):
+        # 1. skip whitespace
+        while i < len(text) and text[i].isspace():
+            i += 1
+        if i >= len(text):
+            return None, i
+
+        # 2. string constant
+        if text[i] == '"':
+            j = i + 1
+            while j < len(text) and text[j] != '"':
+                j += 1
+            return text[i:j+1], j + 1
+
+        # 3. symbol 
+        if text[i] in self.MAP_SYMBOLS:
+            return text[i], i + 1
+
+        # 4. integer constant
+        if text[i].isdigit():
+            j = i
+            while j < len(text) and text[j].isdigit():
+                j += 1
+            return text[i:j], j
+
+        # 5. identifier / keyword
+        if text[i].isalpha() or text[i] == '_':
+            j = i
+            while j < len(text) and (text[j].isalnum() or text[j] == '_'):
+                j += 1
+            return text[i:j], j
+
+        
+        return text[i], i + 1
+
+
+    @staticmethod
+    def remove_comments(text: str) -> str:
+        """Removes all comments from the source code.
+
+        Args:
+            text (str): source code text.
+
+        Returns:
+            str: text without comments.
+        """
+        result = []
+        i = 0
+        in_string = False
+        
+        while i < len(text):
+            # Handle string literals
+            if text[i] == '"' and not in_string:
+                in_string = True
+                result.append(text[i])
+                i += 1
+            elif text[i] == '"' and in_string:
+                in_string = False
+                result.append(text[i])
+                i += 1
+            # Handle // line comment
+            elif not in_string and i + 1 < len(text) and text[i:i+2] == '//':
+                while i < len(text) and text[i] != '\n':
+                    i += 1
+            # Handle /* block comment */
+            elif not in_string and i + 1 < len(text) and text[i:i+2] == '/*':
+                i += 2
+                while i + 1 < len(text) and text[i:i+2] != '*/':
+                    i += 1
+                i += 2  # Skip */
+            else:
+                result.append(text[i])
+                i += 1
+        
+        return ''.join(result)
+
+
 
     def has_more_tokens(self) -> bool:
         """Do we have more tokens in the input?
@@ -110,7 +214,7 @@ class JackTokenizer:
             bool: True if there are more tokens, False otherwise.
         """
         # Your code goes here!
-        pass
+        return self.current_index + 1 < len(self.tokens)
 
     def advance(self) -> None:
         """Gets the next token from the input and makes it the current token. 
@@ -118,7 +222,9 @@ class JackTokenizer:
         Initially there is no current token.
         """
         # Your code goes here!
-        pass
+        self.current_index += 1
+        self.current_token = self.tokens[self.current_index]
+
 
     def token_type(self) -> str:
         """
@@ -127,7 +233,18 @@ class JackTokenizer:
             "KEYWORD", "SYMBOL", "IDENTIFIER", "INT_CONST", "STRING_CONST"
         """
         # Your code goes here!
-        pass
+        if self.current_token is None:
+            return ""
+        if self.current_token in JackTokenizer.MAP_KEYWORDS:
+            return "KEYWORD"
+        elif self.current_token in JackTokenizer.MAP_SYMBOLS:
+            return "SYMBOL"
+        elif self.current_token.isdigit() and 0 <= int(self.current_token) <= 32767:
+            return "INT_CONST"
+        elif self.current_token.startswith('"') and self.current_token.endswith('"'):
+            return "STRING_CONST"
+        else:
+            return "IDENTIFIER"
 
     def keyword(self) -> str:
         """
@@ -139,7 +256,9 @@ class JackTokenizer:
             "IF", "ELSE", "WHILE", "RETURN", "TRUE", "FALSE", "NULL", "THIS"
         """
         # Your code goes here!
-        pass
+        if self.current_token is None:
+            return ""
+        return JackTokenizer.MAP_KEYWORDS[self.current_token]
 
     def symbol(self) -> str:
         """
@@ -151,8 +270,7 @@ class JackTokenizer:
               '-' | '*' | '/' | '&' | '|' | '<' | '>' | '=' | '~' | '^' | '#'
         """
         # Your code goes here!
-        pass
-
+        return self.current_token if self.current_token else "" 
     def identifier(self) -> str:
         """
         Returns:
@@ -164,7 +282,7 @@ class JackTokenizer:
                   identifiers, so 'self' cannot be an identifier, etc'.
         """
         # Your code goes here!
-        pass
+        return self.current_token if self.current_token else ""
 
     def int_val(self) -> int:
         """
@@ -175,7 +293,7 @@ class JackTokenizer:
             integerConstant: A decimal number in the range 0-32767.
         """
         # Your code goes here!
-        pass
+        return int(self.current_token) if self.current_token else 0
 
     def string_val(self) -> str:
         """
@@ -187,4 +305,10 @@ class JackTokenizer:
                       double quote or newline '"'
         """
         # Your code goes here!
-        pass
+        if self.current_token and self.current_token.startswith('"') and self.current_token.endswith('"'):
+            return self.current_token[1:-1]  # Remove quotes
+        return ""
+
+
+
+        
