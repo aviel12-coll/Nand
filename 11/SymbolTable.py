@@ -99,7 +99,11 @@ class SymbolTable:
             if the identifier is unknown in the current scope.
         """
         # Your code goes here!
-        pass
+        if name in self.subroutine_scope:
+            return self.subroutine_scope[name][1]
+        elif name in self.class_scope:
+            return self.class_scope[name][1]
+
 
     def type_of(self, name: str) -> str:
         """
@@ -110,7 +114,10 @@ class SymbolTable:
             str: the type of the named identifier in the current scope.
         """
         # Your code goes here!
-        pass
+        if name in self.subroutine_scope:
+            return self.subroutine_scope[name][0]
+        if name in self.class_scope:
+            return self.class_scope[name][0]
 
     def index_of(self, name: str) -> int:
         """
@@ -121,4 +128,7 @@ class SymbolTable:
             int: the index assigned to the named identifier.
         """
         # Your code goes here!
-        pass
+        if name in self.subroutine_scope:
+            return self.subroutine_scope[name][2]
+        if name in self.class_scope:
+            return self.class_scope[name][2]
