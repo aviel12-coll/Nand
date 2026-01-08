@@ -14,17 +14,31 @@ class SymbolTable:
     scopes (class/subroutine).
     """
 
+
+
+
     def __init__(self) -> None:
         """Creates a new empty symbol table."""
         # Your code goes here!
-        pass
+        self.class_scope = {}
+        self.subroutine_scope = {}
+
+
+        # counters for each kind
+        self.static_counter = 0
+        self.field_counter = 0
+        self.arg_counter = 0
+        self.var_counter = 0
+        
 
     def start_subroutine(self) -> None:
         """Starts a new subroutine scope (i.e., resets the subroutine's 
         symbol table).
         """
         # Your code goes here!
-        pass
+        self.subroutine_scope = {}
+        self.arg_counter = 0
+        self.var_counter = 0
 
     def define(self, name: str, type: str, kind: str) -> None:
         """Defines a new identifier of a given name, type and kind and assigns 
@@ -38,8 +52,22 @@ class SymbolTable:
             "STATIC", "FIELD", "ARG", "VAR".
         """
         # Your code goes here!
-        pass
-
+        if kind == "STATIC":
+            index = self.static_counter
+            self.class_scope[name] = (type, kind, index)
+            self.static_counter += 1
+        elif kind == "FIELD":   
+            index= self.field_counter
+            self.class_scope[name]= (type, kind, index)
+            self.field_counter += 1
+        elif kind == "ARG":
+            index = self.arg_counter
+            self.subroutine_scope[name] = (type, kind, index)
+            self.arg_counter += 1
+        elif kind == "VAR":
+            index = self.var_counter
+            self.subroutine_scope[name] = (type, kind, index)
+            self.var_counter += 1
     def var_count(self, kind: str) -> int:
         """
         Args:
@@ -50,7 +78,16 @@ class SymbolTable:
             the current scope.
         """
         # Your code goes here!
-        pass
+        if kind == "STATIC":
+            return self.static_counter
+        elif kind == "FIELD":
+            return self.field_counter
+        elif kind == "ARG":
+            return self.arg_counter
+        elif kind == "VAR":
+            return self.var_counter
+        else:
+            return 0
 
     def kind_of(self, name: str) -> str:
         """
