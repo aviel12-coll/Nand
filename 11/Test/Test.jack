@@ -1,0 +1,7 @@
+class Test {
+  function void main() {
+    var Point p;
+    do p.move(1, 2);
+    return;
+  }
+}

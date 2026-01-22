@@ -1,0 +1,10 @@
+class TestArray {
+  function void main() {
+    var Array arr;
+    var int x;
+    let arr = Array.new(10);
+    let arr[5] = 7;
+    let x = arr[5];
+    return;
+  }
+}

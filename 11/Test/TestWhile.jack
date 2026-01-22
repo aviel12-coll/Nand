@@ -1,0 +1,10 @@
+class TestWhile {
+  function void main() {
+    var int i;
+    let i = 0;
+    while (i < 3) {
+      let i = i + 1;
+    }
+    return;
+  }
+}

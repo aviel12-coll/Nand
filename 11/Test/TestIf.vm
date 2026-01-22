@@ -1,0 +1,17 @@
+function TestIf.main 1
+push constant 5
+pop local 0
+push local 0
+push constant 3
+gt
+not
+if-goto IF_ELSE0
+push constant 10
+pop local 0
+goto IF_END0
+label IF_ELSE0
+push constant 1
+pop local 0
+label IF_END0
+push constant 0
+return

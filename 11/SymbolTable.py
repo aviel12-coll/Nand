@@ -6,6 +6,7 @@ as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
+from typing import Optional
 
 
 class SymbolTable:
@@ -101,8 +102,10 @@ class SymbolTable:
         # Your code goes here!
         if name in self.subroutine_scope:
             return self.subroutine_scope[name][1]
-        elif name in self.class_scope:
+        if name in self.class_scope:
             return self.class_scope[name][1]
+        else:
+            return None
 
 
     def type_of(self, name: str) -> str:

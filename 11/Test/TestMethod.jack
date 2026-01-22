@@ -1,0 +1,8 @@
+class TestMethod {
+  field int x;
+  
+  method void foo() {
+    do Memory.deAlloc(this);
+    return;
+  }
+}

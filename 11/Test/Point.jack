@@ -1,0 +1,7 @@
+class Point {
+  field int x, y;
+
+  constructor Point new() {
+    return this;
+  }
+}

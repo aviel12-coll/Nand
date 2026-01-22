@@ -1,0 +1,9 @@
+class PointX {
+  field int x, y;
+
+  method void move(int dx, int dy) {
+    let x = x + dx;
+    let y = y + dy;
+    return;
+  }
+}

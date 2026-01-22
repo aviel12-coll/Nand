@@ -18,7 +18,41 @@ class VMWriter:
         # Your code goes here!
         # Note that you can write to output_stream like so:
         # output_stream.write("Hello world! \n")
-        pass
+        self.output_stream = output_stream
+
+
+    @staticmethod
+    def segment_name(segment: str) -> str:
+        mapping = {
+            "CONST": "constant",
+            "ARG": "argument",
+            "LOCAL": "local",
+            "STATIC": "static",
+            "THIS": "this",
+            "THAT": "that",
+            "POINTER": "pointer",
+            "TEMP": "temp"
+        }
+        return mapping[segment]
+    
+
+    @staticmethod
+    def arithmetic_name(command: str) -> str:
+        mapping = {
+            "ADD": "add",
+            "SUB": "sub",
+            "NEG": "neg",
+            "EQ": "eq",
+            "GT": "gt",
+            "LT": "lt",
+            "AND": "and",
+            "OR": "or",
+            "NOT": "not",
+            "SHIFTLEFT": "shiftleft",
+            "SHIFTRIGHT": "shiftright"
+        }
+        return mapping[command]
+   
 
     def write_push(self, segment: str, index: int) -> None:
         """Writes a VM push command.
@@ -29,7 +63,7 @@ class VMWriter:
             index (int): the index to push to.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"push {self.segment_name(segment)} {index}\n")
 
     def write_pop(self, segment: str, index: int) -> None:
         """Writes a VM pop command.
@@ -40,7 +74,7 @@ class VMWriter:
             index (int): the index to pop from.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"pop {self.segment_name(segment)} {index}\n")
 
     def write_arithmetic(self, command: str) -> None:
         """Writes a VM arithmetic command.
@@ -50,7 +84,7 @@ class VMWriter:
             "EQ", "GT", "LT", "AND", "OR", "NOT", "SHIFTLEFT", "SHIFTRIGHT".
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"{self.arithmetic_name(command)}\n")
 
     def write_label(self, label: str) -> None:
         """Writes a VM label command.
@@ -59,7 +93,7 @@ class VMWriter:
             label (str): the label to write.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"label {label}\n")
 
     def write_goto(self, label: str) -> None:
         """Writes a VM goto command.
@@ -68,7 +102,7 @@ class VMWriter:
             label (str): the label to go to.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"goto {label}\n")
 
     def write_if(self, label: str) -> None:
         """Writes a VM if-goto command.
@@ -77,7 +111,7 @@ class VMWriter:
             label (str): the label to go to.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"if-goto {label}\n")
 
     def write_call(self, name: str, n_args: int) -> None:
         """Writes a VM call command.
@@ -87,7 +121,7 @@ class VMWriter:
             n_args (int): the number of arguments the function receives.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"call {name} {n_args}\n")
 
     def write_function(self, name: str, n_locals: int) -> None:
         """Writes a VM function command.
@@ -97,9 +131,9 @@ class VMWriter:
             n_locals (int): the number of local variables the function uses.
         """
         # Your code goes here!
-        pass
+        self.output_stream.write(f"function {name} {n_locals}\n")
 
     def write_return(self) -> None:
         """Writes a VM return command."""
         # Your code goes here!
-        pass
+        self.output_stream.write("return\n")

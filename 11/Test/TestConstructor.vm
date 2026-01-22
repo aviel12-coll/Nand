@@ -1,0 +1,8 @@
+function TestConstructor.new 0
+push constant 1
+call Memory.alloc 1
+pop pointer 0
+push constant 5
+pop this 0
+push pointer 0
+return

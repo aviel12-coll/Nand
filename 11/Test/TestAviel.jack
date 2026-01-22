@@ -1,0 +1,6 @@
+class TestAviel{
+  function void main() {
+    do draw();
+    return;
+  }
+}

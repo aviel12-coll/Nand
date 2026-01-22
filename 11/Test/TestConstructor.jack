@@ -1,0 +1,8 @@
+class TestConstructor {
+  field int x;
+  
+  constructor TestConstructor new() {
+    let x = 5;
+    return this;
+  }
+}

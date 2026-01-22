@@ -1,0 +1,3 @@
+function Main.foo 0
+push constant 0
+return
